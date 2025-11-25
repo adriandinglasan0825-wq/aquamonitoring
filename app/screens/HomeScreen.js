@@ -349,7 +349,7 @@ export default function HomeScreen({ navigation }) {
 >
 
 
-                <Text style={styles.label}>🌡 Water Temp boy</Text>
+                <Text style={styles.label}>🌡 Water Temp </Text>
                 <Text style={[styles.value, { color: getValueColor('temperature', waterData.temperature) }]}>
                   {Number(waterData.temperature).toFixed(1)}°C
                 </Text>
