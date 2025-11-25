@@ -352,14 +352,14 @@ const styles = StyleSheet.create({
   downloadButton: { backgroundColor: "#2ECC71", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
   downloadText: { color: "#fff", fontWeight: "bold" },
 sortButton: { 
-  backgroundColor: "#63cf6cff",
+  backgroundColor: "#000000ff",
   paddingVertical: 12,
   borderRadius: 8,
   width: "100%",       // ⬅️ FULL WIDTH
   alignItems: "center" // ⬅️ CENTER TEXT
 },
 sortText: { 
-  color: "#333", 
+  color: "#ffffffff", 
   fontWeight: "600",
   fontSize: 16,
 },
