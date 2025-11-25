@@ -110,41 +110,48 @@ export default function HomeScreen({ navigation }) {
     useCallback(() => {
       let cancelled = false;
 
-  const buildDailyChart = (historyRows, paramKey, selectedDateStr = null) => {
-
+const buildDailyChart = (historyRows, paramKey, selectedDateStr = null) => {
   if (!historyRows || historyRows.length === 0) {
     return {
       labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
-      data: Array(24).fill(null)
+      data: Array(24).fill(null),
     };
   }
 
-  // If no date selected, use latest date from DB
-  const latestDate = historyRows
-    .map(r => new Date(r.date))
-    .sort((a, b) => b - a)[0]
-    .toISOString()
-    .split("T")[0];
+// --- Normalize all dates to YYYY-MM-DD (remove timezone completely)
+historyRows = historyRows.map(r => ({
+  ...r,
+  date: (typeof r.date === "string" ? r.date.split("T")[0] : "")
+}));
 
-  const targetDate = selectedDateStr || latestDate;
+// --- Extract unique dates
+const uniqueDates = [...new Set(historyRows.map(r => r.date))];
 
-  console.log("📅 Chart using date:", targetDate);
+// --- Sort by REAL date (not string)
+uniqueDates.sort((a, b) => new Date(b) - new Date(a));
 
+// Most recent date in DB
+const latestDate = uniqueDates[0];
+
+// --- Choose selected or latest date
+const targetDate = selectedDateStr || latestDate;
+
+console.log("📅 FIXED Chart using date:", targetDate);
+
+
+
+  // --- Prepare 24 hours
   const values = Array(24).fill(null);
 
-  historyRows.forEach((r) => {
-
-    const rowDate = new Date(r.date)
-      .toISOString()
-      .split("T")[0];
+  historyRows.forEach(r => {
+    const rowDate = r.date;
 
     if (rowDate !== targetDate) return;
 
     const hour = Number(r.hour);
-    if (hour < 0 || hour > 23) return;
+    if (isNaN(hour) || hour < 0 || hour > 23) return;
 
     let value = null;
-
     if (paramKey === "temperature") value = r.avg_temperature;
     if (paramKey === "ph") value = r.avg_ph;
     if (paramKey === "do") value = r.avg_oxygen;
@@ -162,6 +169,8 @@ export default function HomeScreen({ navigation }) {
 
 
 
+
+
       const fetchHistory = async () => {
         setChartLoaded(false);
         setChartLoadingText('Loading history...');
@@ -171,6 +180,8 @@ export default function HomeScreen({ navigation }) {
           if (cancelled) return;
 
           // build for current selected param
+          
+
           const built = buildDailyChart(history, selectedParam, selectedDate);
 
           setChartData({ labels: built.labels, datasets: [{ data: built.data }] });

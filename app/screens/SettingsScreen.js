@@ -96,7 +96,7 @@ export default function SettingsScreen({ navigation }) {
           <View style={styles.rangeRow}>
             <TextInput style={styles.input} keyboardType="numeric" value={ranges.ammonia.min} onChangeText={val => updateRange('ammonia','min',val)} placeholder="Min" />
             <Text style={styles.to}>to</Text>
-            <Text style={styles.input} keyboardType="numeric" value={ranges.ammonia.max} onChangeText={val => updateRange('ammonia','max',val)} placeholder="Max" />
+            <TextInput style={styles.input} keyboardType="numeric" value={ranges.ammonia.max} onChangeText={val => updateRange('ammonia','max',val)} placeholder="Max" />
           </View>
         </View>
 

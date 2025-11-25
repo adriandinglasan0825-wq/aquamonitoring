@@ -14,10 +14,13 @@ export default function HistoryScreen({ navigation }) {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
+  const [sortDesc, setSortDesc] = useState(true);
+
   const [mergedData, setMergedData] = useState([]);
   const [safeRanges, setSafeRanges] = useState(null);
   const [groupedData, setGroupedData] = useState([]);
   const [activeDate, setActiveDate] = useState(null);
+  
 
   const API_BASE = "http://192.168.1.9:5000";
 
@@ -177,6 +180,8 @@ export default function HistoryScreen({ navigation }) {
       return "normal";
     };
 
+    
+
     const states = [
       checkParam(row.avg_temperature, temperature),
       checkParam(row.avg_ph, ph),
@@ -193,6 +198,18 @@ export default function HistoryScreen({ navigation }) {
       return { text: "Warning", color: "#FFCC00" };
     return { text: "Normal", color: "#34C759" };
   };
+  const handleSortToggle = () => {
+  const newMode = !sortDesc;
+  setSortDesc(newMode);
+
+  const sorted = [...groupedData].sort((a, b) => {
+    const aDate = new Date(a.date);
+    const bDate = new Date(b.date);
+    return newMode ? bDate - aDate : aDate - bDate;
+  });
+
+  setGroupedData(sorted);
+};
 
   return (
     <View style={styles.container}>
@@ -200,17 +217,11 @@ export default function HistoryScreen({ navigation }) {
         <Text style={styles.title}>History</Text>
       </View>
 
-      <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.downloadButton} onPress={() => alert("Download coming soon!")}>
-          <Text style={styles.downloadText}>⬇️ Download</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sortButton} onPress={() => alert("Sort feature coming soon!")}>
-          <Text style={styles.sortText}>⇅ Sort</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterButton} onPress={() => alert("Filter feature coming soon!")}>
-          <Text style={styles.filterText}>🔍 Filter</Text>
-        </TouchableOpacity>
-      </View>
+<View style={styles.actionRow}>
+  <TouchableOpacity style={styles.sortButton} onPress={handleSortToggle}>
+    <Text style={styles.sortText}>⇅ Sort</Text>
+  </TouchableOpacity>
+</View>
 
       <ScrollView style={styles.scrollArea} contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={styles.tableHeader}>
@@ -333,11 +344,26 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingTop: 40, paddingHorizontal: 20 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15 },
   title: { fontSize: 26, fontWeight: "bold", color: "#000" },
-  actionRow: { flexDirection: "row", alignItems: "center", marginBottom: 10, justifyContent: "space-between" },
+ actionRow: { 
+  width: "100%",
+  marginBottom: 10,
+},
+
   downloadButton: { backgroundColor: "#2ECC71", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
   downloadText: { color: "#fff", fontWeight: "bold" },
-  sortButton: { backgroundColor: "#f2f2f2", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
-  sortText: { color: "#333", fontWeight: "500" },
+sortButton: { 
+  backgroundColor: "#63cf6cff",
+  paddingVertical: 12,
+  borderRadius: 8,
+  width: "100%",       // ⬅️ FULL WIDTH
+  alignItems: "center" // ⬅️ CENTER TEXT
+},
+sortText: { 
+  color: "#333", 
+  fontWeight: "600",
+  fontSize: 16,
+},
+
   filterButton: { backgroundColor: "#f2f2f2", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
   filterText: { color: "#333", fontWeight: "500" },
   tableHeader: { flexDirection: "row", backgroundColor: "#E0E0E0", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 10, marginBottom: 8 },
