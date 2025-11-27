@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
   chartContainer: { alignItems: 'center', marginTop: 10, marginBottom: 10, width: '100%', paddingHorizontal: 20 },
   chart: { borderRadius: 10, paddingRight: 0 },
   footer: {
-    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#f9f9f9', paddingVertical: 10,
+    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#f9f9f9', paddingVertical: 10, marginVertical: 40,
     borderTopWidth: 1, borderTopColor: '#ddd', position: 'absolute', bottom: 0, width: Dimensions.get('window').width,
   },
   footerButton: { alignItems: 'center', flex: 1 },

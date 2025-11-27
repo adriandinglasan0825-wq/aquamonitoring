@@ -1,0 +1,30 @@
+{
+  "cli": {
+    "version": ">= 16.28.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "node": "20.11.0"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "node": "20.11.0"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "node": "20.11.0"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

@@ -352,14 +352,14 @@ const styles = StyleSheet.create({
   downloadButton: { backgroundColor: "#2ECC71", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
   downloadText: { color: "#fff", fontWeight: "bold" },
 sortButton: { 
-  backgroundColor: "#000000ff",
+  backgroundColor: "#449d54ff",
   paddingVertical: 12,
   borderRadius: 8,
   width: "100%",       // ⬅️ FULL WIDTH
   alignItems: "center" // ⬅️ CENTER TEXT
 },
 sortText: { 
-  color: "#ffffffff", 
+  color: "#333", 
   fontWeight: "600",
   fontSize: 16,
 },
@@ -375,9 +375,9 @@ sortText: {
   statusDot: { width: 10, height: 10, borderRadius: 5, marginRight: 6 },
   statusText: { fontSize: 13, color: "#333" },
   scrollArea: { flex: 1 },
-  footer: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", backgroundColor: "#f9f9f9", paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#ddd", position: "absolute", bottom: 0, width: Dimensions.get("window").width },
+  footer: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", backgroundColor: "#e40d0dff", paddingVertical: 10,  borderTopWidth: 1, borderTopColor: "#ddd", position: "absolute", bottom: 0, width: Dimensions.get("window").width },
   footerButton: { alignItems: "center", flex: 1 },
-  footerIcon: { width: 26, height: 26, marginBottom: 4, resizeMode: "contain" },
+  footerIcon: { width: 26, height: 26, marginBottom: 4,paddingVertical:30, resizeMode: "contain" },
   dropdownArea: {backgroundColor: "#fff",borderRadius: 8,marginTop: 4, marginHorizontal: 6, paddingBottom: 8, overflow: "hidden",borderWidth: 1, borderColor: "#E0E0E0",},
   dropdownHeader: {backgroundColor: "#E9E9E9",color: "#333",fontSize: 14,fontWeight: "bold",textAlign: "center",paddingVertical: 8,borderBottomWidth: 1,borderBottomColor: "#D0D0D0",},
   dataHeader: {flexDirection: "row",backgroundColor: "#DADADA",borderBottomWidth: 1,borderBottomColor: "#C0C0C0",paddingVertical: 6,},

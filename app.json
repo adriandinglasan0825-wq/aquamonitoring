@@ -20,12 +20,16 @@
         "foregroundImage": "",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.aquamonitorthesispcu.watermonitorui"
     },
     "web": {
       "favicon": ""
+    },
+    "extra": {
+      "eas": {
+        "projectId": "05f97c68-6fff-4d34-baa8-c9e792e9a9fb"
+      }
     }
   }
 }
-
-
