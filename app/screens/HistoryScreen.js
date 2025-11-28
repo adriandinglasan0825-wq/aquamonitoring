@@ -375,7 +375,7 @@ sortText: {
   statusDot: { width: 10, height: 10, borderRadius: 5, marginRight: 6 },
   statusText: { fontSize: 13, color: "#333" },
   scrollArea: { flex: 1 },
-  footer: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", backgroundColor: "#e40d0dff", paddingVertical: 10,  borderTopWidth: 1, borderTopColor: "#ddd", position: "absolute", bottom: 0, width: Dimensions.get("window").width },
+  footer: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", backgroundColor: "#eee1e1ff", paddingVertical: 10,  borderTopWidth: 1, borderTopColor: "#ddd", position: "absolute", bottom: 0, width: Dimensions.get("window").width },
   footerButton: { alignItems: "center", flex: 1 },
   footerIcon: { width: 26, height: 26, marginBottom: 4,paddingVertical:30, resizeMode: "contain" },
   dropdownArea: {backgroundColor: "#fff",borderRadius: 8,marginTop: 4, marginHorizontal: 6, paddingBottom: 8, overflow: "hidden",borderWidth: 1, borderColor: "#E0E0E0",},
