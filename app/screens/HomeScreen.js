@@ -55,7 +55,7 @@ export default function HomeScreen({ navigation }) {
 
   const [autoFed, setAutoFed] = useState(false);
 
-  const API_BASE = 'http://192.168.1.9:5000';
+  const API_BASE = 'http://192.168.4.10:5000';
 
   // --- Live box data (unchanged)
   useEffect(() => {

@@ -13,7 +13,7 @@ const defaultRanges = {
 
 export default function SettingsScreen({ navigation }) {
   const [ranges, setRanges] = useState(defaultRanges);
-  const API_BASE = 'http://192.168.1.9:5000';
+  const API_BASE = 'http://192.168.4.10:5000';
 
   useEffect(() => {
     const loadRanges = async () => {
