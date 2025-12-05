@@ -22,7 +22,7 @@ export default function HistoryScreen({ navigation }) {
   const [activeDate, setActiveDate] = useState(null);
   
 
-  const API_BASE = "http://192.168.4.10:5000";
+  const API_BASE = "http://192.168.1.21:5000";
 
   // load safe ranges
   useEffect(() => {
@@ -40,12 +40,13 @@ export default function HistoryScreen({ navigation }) {
           }
           setSafeRanges(normalized);
         } else {
-          setSafeRanges({
-            temperature: { min: 28, max: 31 },
-            ph: { min: 7.0, max: 8.5 },
-            do: { min: 5, max: 7 },
-            ammonia: { min: 0, max: 0.02 },
-          });
+     setSafeRanges({
+  temperature: { min: 28, max: 31 },
+  ph: { min: 7.0, max: 8.5 },
+  do: { min: 5, max: 7 },
+  ammonia: { min: 0, max: 0.02 },
+  water_level: { min: 20, max: 100 }, // ✅ ADDED
+});
         }
       } catch (err) {
         console.error("Failed to load safe ranges:", err);
@@ -112,46 +113,55 @@ export default function HistoryScreen({ navigation }) {
     });
   }
 
-  return {
-    date: localDate,
-    type: "Sensor Reading",
-    avg_temperature: r.avg_temperature,
-    avg_ph: r.avg_ph,
-    avg_oxygen: r.avg_oxygen,
-    avg_ammonia: r.avg_ammonia,
-    hour: r.hour,
-    isSensor: true,
-  };
+return {
+  date: localDate,
+  type: "Sensor Reading",
+  avg_temperature: r.avg_temperature,
+  avg_ph: r.avg_ph,
+  avg_oxygen: r.avg_oxygen,
+  avg_ammonia: r.avg_ammonia,
+  avg_water_level: r.avg_water_level,   // ✅ ADDED
+  hour: r.hour,
+  isSensor: true,
+};
 });
 
 
-      const activityRows = activities.map((a) => {
-        // created_at can be "YYYY-MM-DD HH:MM:SS" or ISO; normalize to YYYY-MM-DD
-        let localDate = '';
-        if (!a.created_at) {
-          localDate = new Date().toISOString().split('T')[0];
-        } else if (a.created_at.includes('T')) {
-          localDate = a.created_at.split('T')[0];
-        } else {
-          // 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD'
-          localDate = a.created_at.split(' ')[0];
-        }
+    const activityRows = activities.map((a) => {
+  let localDate = "";
+  let timeOnly = "—";
 
-        return {
-          date: localDate,
-          type:
-            a.type === "schedule"
-              ? "Scheduled Feed"
-              : a.type === "manual_feed"
-              ? "Manual Feed"
-              : "Other",
-          message: a.message,
-          rawType: a.type,
-          statusText: "Active",
-          created_at: a.created_at,
-          isSensor: false,
-        };
+  if (a.created_at) {
+    if (a.created_at.includes("T")) {
+      const d = new Date(a.created_at);
+      localDate = d.toISOString().split("T")[0];
+      timeOnly = d.toLocaleTimeString("en-PH", {
+        hour: "2-digit",
+        minute: "2-digit"
       });
+    } else {
+      const parts = a.created_at.split(" ");
+      localDate = parts[0];
+      timeOnly = parts[1]?.slice(0,5) || "—";
+    }
+  }
+
+  return {
+    date: localDate,
+    type:
+      a.type === "schedule"
+        ? "Scheduled Feed"
+        : a.type === "manual_feed"
+        ? "Manual Feed"
+        : "Other",
+    time: timeOnly,
+    rawType: a.type,
+    statusText: "Active",
+    created_at: a.created_at,
+    isSensor: false,
+  };
+});
+
 
       const merged = [...sensorRows, ...activityRows].sort(
         (a, b) => new Date(b.date) - new Date(a.date)
@@ -169,7 +179,7 @@ export default function HistoryScreen({ navigation }) {
       return { text: row.statusText, color: "#34C759" };
     }
 
-    const { temperature, ph, do: doRange, ammonia } = safeRanges || {};
+const { temperature, ph, do: doRange, ammonia, water_level } = safeRanges || {};
     let critical = false;
     let warning = false;
 
@@ -181,13 +191,14 @@ export default function HistoryScreen({ navigation }) {
     };
 
     
+const states = [
+  checkParam(row.avg_temperature, temperature),
+  checkParam(row.avg_ph, ph),
+  checkParam(row.avg_oxygen, doRange),
+  checkParam(row.avg_ammonia, ammonia),
+  checkParam(row.avg_water_level, water_level), // ✅ ADDED
+];
 
-    const states = [
-      checkParam(row.avg_temperature, temperature),
-      checkParam(row.avg_ph, ph),
-      checkParam(row.avg_oxygen, doRange),
-      checkParam(row.avg_ammonia, ammonia),
-    ];
 
     if (states.includes("critical")) critical = true;
     else if (states.includes("warning")) warning = true;
@@ -275,6 +286,8 @@ export default function HistoryScreen({ navigation }) {
                 <Text style={[styles.dataCol,{flex:1}]}>pH</Text>
                 <Text style={[styles.dataCol,{flex:1}]}>O₂ (mg/L)</Text>
                 <Text style={[styles.dataCol,{flex:1}]}>Ammonia</Text>
+                <Text style={[styles.dataCol,{flex:1}]}>Water %</Text>
+
               </View>
 
               {group.sensor.map((r,j)=>(
@@ -288,6 +301,10 @@ export default function HistoryScreen({ navigation }) {
                   <Text style={[styles.dataCell,{flex:1}]}>{r.avg_ph?.toFixed(2) ?? "—"}</Text>
                   <Text style={[styles.dataCell,{flex:1}]}>{r.avg_oxygen?.toFixed(2) ?? "—"}</Text>
                   <Text style={[styles.dataCell,{flex:1}]}>{r.avg_ammonia?.toFixed(2) ?? "—"}</Text>
+                  <Text style={[styles.dataCell,{flex:1}]}>
+  {r.avg_water_level != null ? `${r.avg_water_level.toFixed(0)}%` : "—"}
+</Text>
+
                 </View>
               ))}
             </View>
@@ -296,23 +313,50 @@ export default function HistoryScreen({ navigation }) {
       )}
 
       
-      {group.feeder.length > 0 && (
+{group.feeder.length > 0 && (
   <View style={styles.rowContainer}>
     <View style={styles.tableRow}>
       <Text style={[styles.cellText,{flex:1}]}>{group.date}</Text>
-      <Text style={[styles.cellText,{flex:1.2}]}>
- { group.feeder.find(f => f.type !== "Other")?.type || "Other" }
+      <Text style={[styles.cellText,{flex:1.2}]}>Feed prawn</Text>
 
-</Text>
-
-
-      <View style={[styles.statusWrapper,{flex:1}]}>
+      <View style={[styles.statusWrapper,{flex:0.6}]} >
         <View style={[styles.statusDot,{backgroundColor:"#34C759"}]} />
         <Text style={styles.statusText}>Active</Text>
       </View>
+
+      <TouchableOpacity onPress={()=> 
+        setActiveDate(activeDate === `${group.date}-feed` ? null : `${group.date}-feed`)
+      }>
+        <Text style={styles.moreIcon}>
+          {activeDate === `${group.date}-feed` ? "△" : "▽"}
+        </Text>
+      </TouchableOpacity>
     </View>
+
+    {/* ✅ FEED DROPDOWN */}
+    {activeDate === `${group.date}-feed` && (
+      <View style={styles.dropdownArea}>
+        <Text style={styles.dropdownHeader}>Feed Activity Log</Text>
+
+        <View style={styles.dataHeader}>
+          <Text style={[styles.dataCol,{flex:1}]}>Time</Text>
+          <Text style={[styles.dataCol,{flex:1}]}>Type</Text>
+        </View>
+
+        {group.feeder.map((f, j) => (
+          <View
+            key={j}
+            style={[styles.hourRow, j % 2 === 0 ? styles.evenRow : styles.oddRow]}
+          >
+            <Text style={[styles.dataCell,{flex:1}]}>{f.time}</Text>
+            <Text style={[styles.dataCell,{flex:1}]}>{f.type}</Text>
+          </View>
+        ))}
+      </View>
+    )}
   </View>
 )}
+
 
 
     </View>
