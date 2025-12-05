@@ -22,27 +22,32 @@ export default function HomeScreen({ navigation }) {
   const fadeSavedAnim = useRef(new Animated.Value(0)).current;
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const SENSOR_ORDER = ['temperature', 'ph', 'do', 'ammonia', 'water_level'];
+  const [sensorIndex, setSensorIndex] = useState(0);
 
   const [safeRanges, setSafeRanges] = useState({
     temperature: { min: 28, max: 31 },
     ph: { min: 7.0, max: 8.5 },
     do: { min: 5, max: 7 },
-    ammonia: { min: 0, max: 0.02 }
+    ammonia: { min: 0, max: 0.02 },
+    water_level: { min: 20, max: 100 }
   });
 
-  const [waterData, setWaterData] = useState({
-    temperature: 30.0,
-    ph: 7.5,
-    do: 6.2,
-    ammonia: 0.01,
-  });
-
+const [waterData, setWaterData] = useState({
+  temperature: 30.0,
+  ph: 7.5,
+  do: 6.2,
+  ammonia: 0.01,
+  water_level: 100
+});
   // --- Chart: state for selectable tabs & data
   const PARAMS = [ 
     { key: 'temperature', label: 'Temperature', field: 'avg_temperature', suffix: '°C' },
     { key: 'ph', label: 'pH', field: 'avg_ph', suffix: '' },
     { key: 'do', label: 'Oxygen', field: 'avg_oxygen', suffix: ' mg/L' },
     { key: 'ammonia', label: 'Ammonia', field: 'avg_ammonia', suffix: ' ppm' },
+    { key: 'water_level', label: 'Water Level', field: 'avg_water_level', suffix: '%' },
+
   ];
 
   const [selectedParam, setSelectedParam] = useState('temperature');
@@ -55,7 +60,7 @@ export default function HomeScreen({ navigation }) {
 
   const [autoFed, setAutoFed] = useState(false);
 
-  const API_BASE = 'http://192.168.1.9:5000';
+  const API_BASE = 'http://192.168.1.21:5000';
 
   // --- Live box data (unchanged)
   useEffect(() => {
@@ -63,11 +68,14 @@ export default function HomeScreen({ navigation }) {
       try {
         const res = await axios.get(`${API_BASE}/api/live`);
         if (res.data) {
-          setWaterData(prev => ({
-            temperature: res.data.temperature ?? prev.temperature,
-            ph: res.data.ph ?? prev.ph,
-            do: res.data.oxygen ?? prev.do,
-            ammonia: res.data.ammonia ?? prev.ammonia,
+         setWaterData(prev => ({
+  temperature: res.data.temperature ?? prev.temperature,
+  ph: res.data.ph ?? prev.ph,
+  do: res.data.oxygen ?? prev.do,
+  ammonia: res.data.ammonia ?? prev.ammonia,
+  water_level: res.data.water_level ?? prev.water_level,
+           
+
           }));
         }
       } catch (err) {
@@ -81,29 +89,49 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   // load safe ranges when screen focused
-  useFocusEffect(
-    useCallback(() => {
-      const loadRanges = async () => {
-        try {
-          const saved = await AsyncStorage.getItem('sensorRanges');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            const normalized = {};
-            for (const key in parsed) {
-              normalized[key] = {};
-              for (const bound in parsed[key]) {
-                normalized[key][bound] = parseFloat(parsed[key][bound]);
-              }
-            }
-            setSafeRanges(normalized);
-          }
-        } catch (e) {
-          console.error('Failed to load sensor ranges', e);
+// ✅ SAFE LOAD + MERGE DEFAULTS (CRASH-PROOF)
+useFocusEffect(
+  useCallback(() => {
+    const loadRanges = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('sensorRanges');
+
+        // ✅ DEFAULT SAFE RANGES (ALWAYS COMPLETE)
+        const defaultRanges = {
+          temperature: { min: 28, max: 31 },
+          ph: { min: 7.0, max: 8.5 },
+          do: { min: 5, max: 7 },
+          ammonia: { min: 0, max: 0.02 },
+          water_level: { min: 20, max: 100 },
+        };
+
+        if (saved) {
+          const parsed = JSON.parse(saved);
+
+          // ✅ MERGE SAVED + DEFAULTS (PREVENT UNDEFINED)
+          const fixed = {
+            ...defaultRanges,
+            ...parsed,
+            temperature: { ...defaultRanges.temperature, ...parsed.temperature },
+            ph: { ...defaultRanges.ph, ...parsed.ph },
+            do: { ...defaultRanges.do, ...parsed.do },
+            ammonia: { ...defaultRanges.ammonia, ...parsed.ammonia },
+            water_level: { ...defaultRanges.water_level, ...parsed.water_level },
+          };
+
+          setSafeRanges(fixed);
+        } else {
+          setSafeRanges(defaultRanges);
         }
-      };
-      loadRanges();
-    }, [])
-  );
+      } catch (e) {
+        console.error('Failed to load sensor ranges', e);
+      }
+    };
+
+    loadRanges();
+  }, [])
+);
+
 
   // --- Fetch full-history and build today's 24-hour arrays
   useFocusEffect(
@@ -114,7 +142,8 @@ const buildDailyChart = (historyRows, paramKey, selectedDateStr = null) => {
   if (!historyRows || historyRows.length === 0) {
     return {
       labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
-      data: Array(24).fill(null),
+     data: Array(24).fill(0),
+
     };
   }
 
@@ -153,13 +182,18 @@ console.log("📅 FIXED Chart using date:", targetDate);
 
     let value = null;
     if (paramKey === "temperature") value = r.avg_temperature;
-    if (paramKey === "ph") value = r.avg_ph;
-    if (paramKey === "do") value = r.avg_oxygen;
-    if (paramKey === "ammonia") value = r.avg_ammonia;
+if (paramKey === "ph") value = r.avg_ph;
+if (paramKey === "do") value = r.avg_oxygen;
+if (paramKey === "ammonia") value = r.avg_ammonia;
+if (paramKey === "water_level")
+  value = r.avg_water_level ?? r.water_level ?? r.avg_waterlevel ?? null;
+ // ✅ ADDED
 
-    if (value !== null && !isNaN(value)) {
-      values[hour] = Number(value.toFixed(2));
-    }
+if (value !== null && value !== undefined && !isNaN(value)) {
+  values[hour] = Number(Number(value).toFixed(2)); // ✅ DOUBLE SAFE
+} else {
+  values[hour] = 0; // ✅ GUARANTEED SAFE
+}
   });
 
   const labels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
@@ -319,14 +353,65 @@ console.log("📅 FIXED Chart using date:", targetDate);
         return value >= range.min && value <= range.max ? '#32CD32' : '#FF4C4C';
     }
   };
+  // ✅ SENSOR CAROUSEL CONTROLS
+const nextSensor = () => {
+  const next = (sensorIndex + 1) % SENSOR_ORDER.length;
+  setSensorIndex(next);
+  setSelectedParam(SENSOR_ORDER[next]); // ✅ sync chart
+};
 
-  const alerts = [];
-  if (waterData.temperature > safeRanges.temperature.max) alerts.push('🌡️ Water temperature is too high.');
-  else if (waterData.temperature < safeRanges.temperature.min) alerts.push('🌡️ Water temperature is too low.');
-  if (waterData.ph > safeRanges.ph.max) alerts.push('🧪 pH level is too high.');
-  else if (waterData.ph < safeRanges.ph.min) alerts.push('🧪 pH level is too low.');
-  if (waterData.do > safeRanges.do.max) alerts.push('💨 Dissolved oxygen is too high.');
-  else if (waterData.do < safeRanges.do.min) alerts.push('💨 Dissolved oxygen is too low.');
+const prevSensor = () => {
+  const prev =
+    sensorIndex === 0
+      ? SENSOR_ORDER.length - 1
+      : sensorIndex - 1;
+
+  setSensorIndex(prev);
+  setSelectedParam(SENSOR_ORDER[prev]); // ✅ sync chart
+};
+
+const activeSensor = SENSOR_ORDER[sensorIndex];
+
+
+
+const alerts = [];
+let isUnsafe = false;
+
+// 🌡 Temperature
+if (waterData.temperature > safeRanges.temperature.max) {
+  alerts.push('🌡️ Water temperature is too high.');
+  isUnsafe = true;
+} else if (waterData.temperature < safeRanges.temperature.min) {
+  alerts.push('🌡️ Water temperature is too low.');
+  isUnsafe = true;
+}
+
+// 🧪 pH
+if (waterData.ph > safeRanges.ph.max) {
+  alerts.push('🧪 pH level is too high.');
+  isUnsafe = true;
+} else if (waterData.ph < safeRanges.ph.min) {
+  alerts.push('🧪 pH level is too low.');
+  isUnsafe = true;
+}
+
+// 💨 Dissolved Oxygen
+if (waterData.do > safeRanges.do.max) {
+  alerts.push('💨 Dissolved oxygen is too high.');
+  isUnsafe = true;
+} else if (waterData.do < safeRanges.do.min) {
+  alerts.push('💨 Dissolved oxygen is too low.');
+  isUnsafe = true;
+}
+
+// 💧 Water Level
+if (waterData.water_level < (safeRanges?.water_level?.min ?? 0)) {
+  alerts.push('🚨 Water level is LOW!');
+  isUnsafe = true;
+}
+
+
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -346,23 +431,76 @@ console.log("📅 FIXED Chart using date:", targetDate);
         </Animated.View>
       )}
 
-      <View style={{ flex: 1, width: '100%' }}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.mainContent}>
-            <View style={styles.row}>
+<View style={{ flex: 1, width: '100%' }}>
+  <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <View style={styles.mainContent}>
+
+      {/* ✅ OVERALL WATER STATUS BOX (AUTO SAFE / UNSAFE) */}
+<View style={styles.row}>
+
+  {/* ✅ SAFE / UNSAFE BOX */}
+  <View
+    style={[
+      styles.dataBox,
+      {
+        backgroundColor: isUnsafe ? "#FFECEC" : "#E9F9EF",
+        borderColor: isUnsafe ? "#FF3B30" : "#32CD32",
+      }
+    ]}
+  >
+    <Text style={styles.label}>Overall Water Status</Text>
+    <Text
+      style={[
+        styles.value,
+        { color: isUnsafe ? "#FF3B30" : "#32CD32", fontSize: 22 }
+      ]}
+    >
+      {isUnsafe ? "UNSAFE" : "SAFE"}
+    </Text>
+  </View>
+
+  {/* ✅ WATER LEVEL BOX (NOW BESIDE IT) */}
+  <TouchableOpacity
+    onPress={() => setSelectedParam('water_level')}
+    style={[
+      styles.dataBox,
+     waterData.water_level < (safeRanges?.water_level?.min ?? 0) && { borderColor: '#FF4C4C' },
+      selectedParam === 'water_level' && styles.activeBox
+    ]}
+  >
+    <Text style={styles.label}>💧 Water Level</Text>
+    <Text
+      style={[
+        styles.value,
+        { color: waterData.water_level < safeRanges.water_level.min ? "#FF4C4C" : "#32CD32" }
+      ]}
+    >
+      {waterData.water_level}%
+    </Text>
+    <Text style={styles.safeRange}>
+     Safe: {safeRanges?.water_level?.min ?? 0}% - {safeRanges?.water_level?.max ?? 100}%
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+
+      {/* ✅ YOUR ORIGINAL FIRST SENSOR ROW STARTS HERE */}
+      <View style={styles.row}>
+
+              
               <TouchableOpacity 
   onPress={() => setSelectedParam('temperature')}
   style={[
     styles.dataBox,
     { borderColor: '#FFD700' },
     selectedParam === 'temperature' && styles.activeBox
-  ]}
->
+  ]}>
 
 
                 <Text style={styles.label}>🌡 Water Temp </Text>
                 <Text style={[styles.value, { color: getValueColor('temperature', waterData.temperature) }]}>
-                  {Number(waterData.temperature).toFixed(1)}°C
+                 {Number(waterData.temperature ?? 0).toFixed(1)}°C
                 </Text>
                 <Text style={styles.safeRange}>
                   Safe: {safeRanges.temperature.min}°C - {safeRanges.temperature.max}°C
@@ -381,7 +519,7 @@ console.log("📅 FIXED Chart using date:", targetDate);
 
                 <Text style={styles.label}>🔴 pH Level</Text>
                 <Text style={[styles.value, { color: getValueColor('ph', waterData.ph) }]}>
-                  {Number(waterData.ph).toFixed(2)}
+                {Number(waterData.ph ?? 0).toFixed(2)}
                 </Text>
                 <Text style={styles.safeRange}>
                   Safe: {safeRanges.ph.min} - {safeRanges.ph.max}
@@ -401,7 +539,7 @@ console.log("📅 FIXED Chart using date:", targetDate);
 >
                 <Text style={styles.label}>🟢 Dissolved O₂</Text>
                 <Text style={[styles.value, { color: getValueColor('do', waterData.do) }]}>
-                  {Number(waterData.do).toFixed(1)} mg/L
+                  {Number(waterData.do ?? 0).toFixed(1)} mg/L
                 </Text>
                 <Text style={styles.safeRange}>
                   Safe: {safeRanges.do.min} - {safeRanges.do.max} mg/L
@@ -419,19 +557,18 @@ console.log("📅 FIXED Chart using date:", targetDate);
 
                 <Text style={styles.label}>🟢 Ammonia</Text>
                 <Text style={[styles.value, { color: getValueColor('ammonia', waterData.ammonia) }]}>
-                  {Number(waterData.ammonia).toFixed(3)} ppm
+            {Number(waterData.ammonia ?? 0).toFixed(3)} ppm
+
                 </Text>
                 <Text style={styles.safeRange}>
                   Safe: {safeRanges.ammonia.min} - {safeRanges.ammonia.max} ppm
                 </Text>
               </TouchableOpacity>
             </View>
-
             <TouchableOpacity style={styles.feedButton} onPress={() => setShowFeedModal(true)}>
               <Text style={styles.feedButtonText}>Feed Fish</Text>
             </TouchableOpacity>
 
-       
 
             <View style={styles.chartContainer}>
   {!chartLoaded ? (
@@ -442,28 +579,39 @@ console.log("📅 FIXED Chart using date:", targetDate);
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingRight: 30 }}
     >
-      <LineChart
-        data={{
-          labels: chartData.labels,
-          datasets: chartData.datasets
-        }}
-        width={Dimensions.get('window').width * 2.5}
-        height={200}
-        yAxisSuffix={getSuffixForParam(selectedParam)}
-        chartConfig={{
-          backgroundGradientFrom: '#2a5298',
-          backgroundGradientTo: '#1e3c72',
-          color: (opacity = 1) => `rgba(255,255,255,${opacity})`,
-          labelColor: (opacity = 1) => `rgba(255,255,255,${opacity})`,
-          decimalPlaces: selectedParam === 'ph' ? 2 : 1,
-          propsForDots: { r: '3', strokeWidth: '1' }
-        }}
-        bezier
-        style={styles.chart}
-        withVerticalLines={true}
-        withHorizontalLines={true}
-        fromZero={false}
-      />
+    <LineChart
+  data={{
+    labels: chartData?.labels || [],
+    datasets: [
+      {
+        data: (chartData?.datasets?.[0]?.data || []).map(v =>
+          typeof v === 'number' && !isNaN(v) ? v : 0
+        ),
+      },
+    ],
+  }}
+  width={Dimensions.get('window').width * 2.5}
+  height={220}
+  yAxisSuffix={getSuffixForParam(selectedParam)}
+  chartConfig={{
+    backgroundGradientFrom: '#2a5298',
+    backgroundGradientTo: '#1e3c72',
+    color: (opacity = 1) => `rgba(255,255,255,${opacity})`,
+    labelColor: (opacity = 1) => `rgba(255,255,255,${opacity})`,
+    decimalPlaces:
+      selectedParam === 'ph'
+        ? 2
+        : selectedParam === 'water_level'
+        ? 0
+        : 1,
+    propsForDots: { r: '3', strokeWidth: '1' },
+  }}
+  bezier
+  style={styles.chart}
+  withVerticalLines
+  withHorizontalLines
+  fromZero={false}
+/>
     </ScrollView>
   )}
 
@@ -661,10 +809,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#254a70ff', paddingVertical: 12, width: Dimensions.get('window').width - 40, borderRadius: 10, marginVertical: 15,
   },
   feedButtonText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
-  chartContainer: { alignItems: 'center', marginTop: 10, marginBottom: 10, width: '100%', paddingHorizontal: 20 },
+  chartContainer: { alignItems: 'center', marginTop: 5, marginBottom: 10, width: '100%', paddingHorizontal: 5 },
   chart: { borderRadius: 10, paddingRight: 0 },
   footer: {
-    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#f9f9f9', paddingVertical: 10,
+    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#f9f9f9', paddingVertical: 10, marginVertical: 40,
     borderTopWidth: 1, borderTopColor: '#ddd', position: 'absolute', bottom: 0, width: Dimensions.get('window').width,
   },
   footerButton: { alignItems: 'center', flex: 1 },

@@ -9,32 +9,68 @@ const defaultRanges = {
   ph: { min: '7.0', max: '8.5' },
   do: { min: '5', max: '7' },
   ammonia: { min: '0', max: '0.02' },
+  water_level: { min: '20', max: '100' }, // ✅ REQUIRED
 };
 
 export default function SettingsScreen({ navigation }) {
   const [ranges, setRanges] = useState(defaultRanges);
-  const API_BASE = 'http://192.168.1.9:5000';
+  const API_BASE = 'http://192.168.1.21:5000';
 
-  useEffect(() => {
-    const loadRanges = async () => {
-      try {
-        const saved = await AsyncStorage.getItem('sensorRanges');
-        if (saved) setRanges(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load ranges:', e);
+useEffect(() => {
+  const loadRanges = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('sensorRanges');
+
+      if (saved) {
+        const parsed = JSON.parse(saved);
+
+        // ✅ Merge old saved data WITH new defaults (prevents undefined crash)
+        const merged = {
+          ...defaultRanges,
+          ...parsed,
+          water_level: {
+            min: parsed?.water_level?.min ?? defaultRanges.water_level.min,
+            max: parsed?.water_level?.max ?? defaultRanges.water_level.max,
+          }
+        };
+
+        setRanges(merged);
+      } else {
+        setRanges(defaultRanges);
       }
-    };
-    loadRanges();
-  }, []);
+    } catch (e) {
+      console.error('Failed to load ranges:', e);
+      setRanges(defaultRanges);
+    }
+  };
+
+  loadRanges();
+}, []);
 
   const saveRanges = async () => {
     try {
-      const payload = {
-        temperature: { min: Number(ranges.temperature.min), max: Number(ranges.temperature.max) },
-        ph: { min: Number(ranges.ph.min), max: Number(ranges.ph.max) },
-        do: { min: Number(ranges.do.min), max: Number(ranges.do.max) },
-        ammonia: { min: Number(ranges.ammonia.min), max: Number(ranges.ammonia.max) }
-      };
+ const payload = {
+  temperature: {
+    min: Number(ranges.temperature.min),
+    max: Number(ranges.temperature.max)
+  },
+  ph: {
+    min: Number(ranges.ph.min),
+    max: Number(ranges.ph.max)
+  },
+  do: {
+    min: Number(ranges.do.min),
+    max: Number(ranges.do.max)
+  },
+  ammonia: {
+    min: Number(ranges.ammonia.min),
+    max: Number(ranges.ammonia.max)
+  },
+  water_level: {
+    min: Number(ranges.water_level.min),
+    max: Number(ranges.water_level.max)
+  }
+};
 
       await AsyncStorage.setItem('sensorRanges', JSON.stringify(ranges));
 
@@ -99,6 +135,27 @@ export default function SettingsScreen({ navigation }) {
             <TextInput style={styles.input} keyboardType="numeric" value={ranges.ammonia.max} onChangeText={val => updateRange('ammonia','max',val)} placeholder="Max" />
           </View>
         </View>
+
+        <View style={[styles.card, { borderColor: '#1E90FF' }]}>
+  <Text style={styles.label}>Water Level (%)</Text>
+  <View style={styles.rangeRow}>
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={ranges.water_level.min}
+      onChangeText={val => updateRange('water_level', 'min', val)}
+      placeholder="Min"
+    />
+    <Text style={styles.to}>to</Text>
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={ranges.water_level.max}
+      onChangeText={val => updateRange('water_level', 'max', val)}
+      placeholder="Max"
+    />
+  </View>
+</View>
 
         <TouchableOpacity style={styles.saveButton} onPress={saveRanges}>
           <Text style={styles.saveButtonText}>Save Ranges</Text>
